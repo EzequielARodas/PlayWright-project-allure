@@ -1,0 +1,73 @@
+import { APIRequestContext, BrowserContext, Page } from "@playwright/test";
+import UserApi from "../apis/UserApi";
+import User from "../models/User";
+import config from '../playwright.config'
+
+export default class SignupPage{
+
+    async load(page:Page){
+        await page.goto('/signup');
+    }
+
+    private get firstNameInput(){
+        return '[data-testid=first-name]';
+    }
+
+    private get lastName(){
+        return '[data-testid=last-name]';
+    }
+
+    private get emailInput(){
+        return '[data-testid=email]';
+    }
+
+    private get passwordInput(){
+        return '[data-testid=password]'
+    }
+
+    private get passwordConfirmInput(){
+        return '[data-testid=confirm-password]';
+    }
+
+    private get submitBoton(){
+        return'[data-testid=submit]';
+    }
+    async signup(page:Page, user:User){
+        await page.fill(this.firstNameInput,user.getFirstName());
+        await page.fill(this.lastName,user.getLastName());
+        await page.fill(this.emailInput,user.getEmail());
+        await page.fill(this.passwordInput,user.getPassword());
+        await page.fill(this.passwordConfirmInput,user.getPassword());
+        await page.click(this.submitBoton);
+    }
+
+    async signupUsingAPI(request:APIRequestContext,user:User,context:BrowserContext){
+        const response = await new UserApi().signup(request, user);
+
+        const responseBody = await response.json();
+        const access_token = responseBody.access_token;
+        const firstName = responseBody.firstName;
+        const userID= responseBody.userID;
+
+        user.setAccesToken(access_token);
+        user.setUserID(userID);
+    
+        await context.addCookies([
+            {
+                name: 'access_token',
+                value: access_token,
+                url: config.use?.baseURL,
+            },
+            {
+                name: 'firstName',
+                value: firstName,
+                url: config.use?.baseURL,
+            },
+            {
+                name: 'userID',
+                value: userID,
+                url: config.use?.baseURL,
+            },
+        ]);
+    }
+}
